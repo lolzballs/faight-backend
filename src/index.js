@@ -65,7 +65,7 @@ app.post('/api/match', (req, res) => {
             client.write("\r\n");
         });
         var data = "";
-        client.on('data', (data) => {
+        client.on('data', (chunk) => {
             console.log(data.toString());
             let move;
             var index = chunk.indexOf("\n");
@@ -83,7 +83,6 @@ app.post('/api/match', (req, res) => {
                 data = chunk.slice(index + 1);
             }
 
-            let move = JSON.parse(data.toString());
             console.log(move);
             history.push(move);
 
