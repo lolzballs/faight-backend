@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'production') {
 app.post('/api/match', (req, res) => {
     let body = {
         uid: req.body.uid,
-        elo: req.body.ai.elo,
+        //elo: req.body.ai.elo,
         lang: req.body.ai.lang,
         code: req.body.ai.code,
     };
@@ -35,6 +35,7 @@ app.post('/api/match', (req, res) => {
             } else {
                 const val = data.val();
                 const keys = Object.keys(val);
+                console.log(keys);
                 if (keys.length > 0) {
                     const match = val[keys[0]];
                     ref.child(keys[0]).remove();
@@ -63,10 +64,50 @@ app.post('/api/match', (req, res) => {
             client.write(JSON.stringify({ bot1: body, bot2: a }));
             client.write("\r\n");
         });
+        var data = "";
         client.on('data', (data) => {
+            console.log(data.toString());
+            let move;
+            var index = chunk.indexOf("\n");
+            if (index === -1) {
+                data += chunk;
+            } else {
+                data += chunk.slice(0, index);
+
+                try {
+                    move = JSON.parse(data);
+                } catch (e) {
+                    socket.end();
+                }
+
+                data = chunk.slice(index + 1);
+            }
+
             let move = JSON.parse(data.toString());
             console.log(move);
             history.push(move);
+
+            if (move.message == "Winner") {
+                if (move.bot == 1) {
+                    firebase.database().ref("/users/" + body.uid + "/ai/wins").once("value")
+                    .then(snap => {
+                        firebase.database().ref("/users/" + body.uid + "/ai/wins").set(snap.val() + 1);
+                    });
+                    firebase.database().ref("/users/" + a.uid + "/ai/losses").once("value")
+                    .then(snap => {
+                        firebase.database().ref("/users/" + a.uid + "/ai/losses").set(snap.val() + 1);
+                    });
+                } else {
+                    firebase.database().ref("/users/" + body.uid + "/ai/losses").once("value")
+                    .then(snap => {
+                        firebase.database().ref("/users/" + body.uid + "/ai/losses").set(snap.val() + 1);
+                    });
+                    firebase.database().ref("/users/" + a.uid + "/ai/wins").once("value")
+                    .then(snap => {
+                        firebase.database().ref("/users/" + a.uid + "/ai/wins").set(snap.val() + 1);
+                    });
+                }
+            }
         });
         client.on('end', () => {
             console.log("Connection died");
